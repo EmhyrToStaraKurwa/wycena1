@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-serif; }
+    body.is-building { cursor: none; }
+    .builder-container { display: grid; grid-template-columns: 220px 1fr; height: 100%; }
+    .panel { background: #161519; padding: 15px; overflow-y: auto; text-align: center; }
+    .panel h3 { margin: 0 0 20px; color: #f0f0f0; }
+    .time-counter { color: #f0f0f0; background-color: #292534; padding: 10px; border-radius: 5px; margin-bottom: 20px; font-size: 0.9em; font-weight: bold; }
+    .panel ul { list-style: none; padding: 0; }
+    .panel li { margin-bottom: 25px; }
+    .section-label { display: block; color: #a0a0a0; font-size: 0.9em; margin-bottom: 8px; letter-spacing: 0.5px; }
+    .divider { height: 1px; width: 100%; background-color: #a0a0a0; margin: 8px 0 15px 0; }
+    .img-button-container { display: flex; justify-content: center; align-items: center; gap: 15px; }
+    .img-button { width: 100%; max-width: 45px; height: auto; cursor: pointer; transition: transform 0.2s ease-in-out; border-radius: 5px; }
+    .img-button:hover { transform: scale(1.15); box-shadow: 0 0 10px rgba(149, 151, 255, 0.7); }
+    button.remove-btn { cursor: pointer; background: #4a4a4a; border: 1px solid white; color: white; width: 90%; margin-top: 20px; padding: 8px 16px; border-radius: 5px; }
+    button.remove-btn:hover { background: #606060; }
+    .preview { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 0; background-color: #f0f0f0; }
+    .section-image-preview { opacity: 0; transform: scale(0.95); transition: opacity 0.4s ease, transform 0.4s ease; border-radius: 8px; margin-bottom: 20px; background: transparent; padding: 0; }
+    .section-image-preview.active { opacity: 1; transform: scale(1); }
+    .section-label-preview { display: block; color: #333; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 15px; }
+    .divider-preview { width: 60%; height: 1px; background-color: #ccc; margin: 0 auto 20px auto; }
+    .section-image-preview img { width: 60%; height: auto; display: block; margin: 0 auto; border-radius: 8px; }
+
+    #fixed-controls { position: fixed; bottom: 20px; right: 20px; z-index: 1001; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .save-button { background-color: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; font-weight: bold; cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: background-color 0.2s; }
+    .save-button:hover { background-color: #0056b3; }
+    .fixed-time-counter { color: #161519; background-color: rgba(255, 255, 255, 0.8); padding: 8px 15px; border-radius: 5px; font-size: 0.9em; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); backdrop-filter: blur(5px); }
+    #customCursor { position: fixed; pointer-events: none; opacity: 0; transform: scale(0); transition: opacity 0.3s, transform 0.3s; z-index: 1000; transform-origin: center; }
+    #customCursor.is-img img { max-width: 100px; height: auto; opacity: 0.85; }
+    #customCursor.active { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  </style>
+</head>
+<body>
+  <div class="builder-container">
+    <div class="panel">
+      <h3>Sekcje</h3>
+      <div class="time-counter">
+        Roboczogodziny: <span id="timeValue">0</span> H
+      </div>
+      <ul>
+        <li>
+            <span class="section-label">Sekcja Nawigacji</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="profile-v1" src="images/nav pink.png" alt="Nawigacja Wariant Różowy">
+                <img class="img-button" data-type="profile-v2" src="images/nav.png" alt="Nawigacja Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Główna sekcja</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="main-v2" src="images/Main pink.png" alt="Główna Sekcja Wariant Różowy">
+                <img class="img-button" data-type="main-v1" src="images/Main blue.png" alt="Główna Sekcja Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja Fotografii</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="hero-v1" src="images/slaid foto pink.png" alt="Fotografia Wariant Różowy">
+                <img class="img-button" data-type="hero-v2" src="images/slaid foto blue.png" alt="Fotografia Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja Oferty</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="features-v1" src="images/oferta pink.png" alt="Oferta Wariant Różowy">
+                <img class="img-button" data-type="features-v2" src="images/oferta blue.png" alt="Oferta Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja o Firmie/Tobie</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="gallery-v1" src="images/about pink.png" alt="O firmie Wariant Różowy">
+                <img class="img-button" data-type="gallery-v2" src="images/about blue.png" alt="O firmie Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja Blog</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="cards-v1" src="images/blog pink.png" alt="Blog Wariant Różowy">
+                <img class="img-button" data-type="cards-v2" src="images/blog blue.png" alt="Blog Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja Opinie</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="content-v1" src="images/oceny pink.png" alt="Opinie Wariant Różowy">
+                <img class="img-button" data-type="content-v2" src="images/oceny blue.png" alt="Opinie Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Sekcja Formularz</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="article-v1" src="images/form pink.png" alt="Formularz Wariant Różowy">
+                <img class="img-button" data-type="article-v2" src="images/form blue.png" alt="Formularz Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+            <span class="section-label">Stopka</span>
+            <div class="divider"></div>
+            <div class="img-button-container">
+                <img class="img-button" data-type="footer-v1" src="images/stopka pink.png" alt="Stopka Wariant Różowy">
+                <img class="img-button" data-type="footer-v2" src="images/stopka blue.png" alt="Stopka Wariant Niebieski">
+            </div>
+        </li>
+        <li>
+          <button onclick="removeLastSection()" class="remove-btn">Usuń ostatnią</button>
+        </li>
+      </ul>
+    </div>
+    <div class="preview" id="sectionArea">
+      <h2>Buduj strukturę strony</h2>
+    </div>
+  </div>
+  <div id="customCursor"></div>
+  <div id="fixed-controls">
+    <button class="save-button" onclick="saveSectionsAsImage()">Zapisz sekcje</button>
+    <div class="fixed-time-counter">
+      Roboczogodziny: <span id="timeValueFixed">0</span> H
+    </div>
+  </div>
+
+  <script>
+    const sectionArea = document.getElementById('sectionArea');
+    const placeholder = sectionArea.querySelector('h2');
+    const customCursor = document.getElementById('customCursor');
+    const timeValueSpan = document.getElementById('timeValue');
+    const timeValueFixedSpan = document.getElementById('timeValueFixed');
+    let totalHours = 0;
+    let selectedType = null;
+    let lastX = 0;
+    
+    document.addEventListener('mousemove', (e) => {
+      if (document.body.classList.contains('is-building')) {
+        const currentX = e.pageX;
+        let rotation = 0;
+        if (currentX > lastX) { rotation = 15; } 
+        else if (currentX < lastX) { rotation = -15; }
+        customCursor.style.transform = `translate(-50%, -50%) scale(1) rotate(${rotation}deg)`;
+        customCursor.style.left = e.pageX + 'px';
+        customCursor.style.top = e.pageY + 'px';
+        lastX = currentX;
+      }
+    });
+
+    document.querySelectorAll('[data-type]').forEach(element => {
+      element.addEventListener('click', (e) => {
+        const clickedElement = e.target.closest('[data-type]');
+        if (clickedElement) {
+          selectedType = clickedElement.getAttribute('data-type');
+          customCursor.innerHTML = '';
+          const cursorImg = clickedElement.cloneNode(true);
+          customCursor.appendChild(cursorImg);
+          customCursor.classList.add('is-img', 'active');
+          document.body.classList.add('is-building');
+          lastX = e.pageX;
+        }
+      });
+    });
+
+    function updateCounters() {
+        timeValueSpan.textContent = totalHours;
+        timeValueFixedSpan.textContent = totalHours;
+    }
+
+    sectionArea.addEventListener('click', () => {
+      if (selectedType) {
+        let content = '';
+        const baseClass = "section-image-preview";
+        const titleClass = "section-label-preview";
+        const dividerClass = "divider-preview";
+
+        switch (selectedType) {
+          case 'profile-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Nawigacji</span><div class="${dividerClass}"></div><img src="images-pink/nawigacjapink.png" alt="Podgląd - Sekcja Nawigacji"></div>`; break;
+          case 'main-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Główna sekcja</span><div class="${dividerClass}"></div><img src="images-pink/Main pink.png" alt="Podgląd - Główna Sekcja"></div>`; break;
+          case 'hero-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Fotografii</span><div class="${dividerClass}"></div><img src="images-pink/sekcja fotografii pink.png" alt="Podgląd - Sekcja Fotografii"></div>`; break;
+          case 'features-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Oferty</span><div class="${dividerClass}"></div><img src="images-pink/oferta pink.png" alt="Podgląd - Sekcja Oferty"></div>`; break;
+          case 'gallery-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja o Firmie/Tobie</span><div class="${dividerClass}"></div><img src="images-pink/about pink.png" alt="Podgląd - Sekcja o Firmie"></div>`; break;
+          case 'cards-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Blog</span><div class="${dividerClass}"></div><img src="images-pink/blog pink.png" alt="Podgląd - Sekcja Blog"></div>`; break;
+          case 'content-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Opinie</span><div class="${dividerClass}"></div><img src="images-pink/sekcja opinie pink.png" alt="Podgląd - Sekcja Opinie"></div>`; break;
+          case 'article-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Formularz</span><div class="${dividerClass}"></div><img src="images-pink/form pink.png" alt="Podgląd - Sekcja Formularz"></div>`; break;
+          case 'footer-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Stopka</span><div class="${dividerClass}"></div><img src="images-pink/stopka pink.png" alt="Podgląd - Stopka"></div>`; break;
+
+          case 'profile-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Nawigacji</span><div class="${dividerClass}"></div><img src="images-blue/nawigacja.png" alt="Podgląd - Sekcja Nawigacji"></div>`; break;
+          case 'main-v1': content = `<div class="${baseClass}"><span class="${titleClass}">Główna sekcja</span><div class="${dividerClass}"></div><img src="images-blue/glowna-sekcja.png" alt="Podgląd - Główna Sekcja"></div>`; break;
+          case 'hero-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Fotografii</span><div class="${dividerClass}"></div><img src="images-blue/zdjecia.png" alt="Podgląd - Sekcja Fotografii"></div>`; break;
+          case 'features-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Oferty</span><div class="${dividerClass}"></div><img src="images-blue/oferta.png" alt="Podgląd - Sekcja Oferty"></div>`; break;
+          case 'gallery-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja o Firmie/Tobie</span><div class="${dividerClass}"></div><img src="images-blue/o-mnie-o-firmie.png" alt="Podgląd - Sekcja o Firmie"></div>`; break;
+          case 'cards-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Blog</span><div class="${dividerClass}"></div><img src="images-blue/blog.png" alt="Podgląd - Sekcja Blog"></div>`; break;
+          case 'content-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Opinie</span><div class="${dividerClass}"></div><img src="images-blue/opinie.png" alt="Podgląd - Sekcja Opinie"></div>`; break;
+          case 'article-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Sekcja Formularz</span><div class="${dividerClass}"></div><img src="images-blue/form.png" alt="Podgląd - Sekcja Formularz"></div>`; break;
+          case 'footer-v2': content = `<div class="${baseClass}"><span class="${titleClass}">Stopka</span><div class="${dividerClass}"></div><img src="images-blue/stopka.png" alt="Podgląd - Stopka"></div>`; break;
+        }
+
+        if (content) {
+          const tempWrapper = document.createElement('div');
+          tempWrapper.innerHTML = content;
+          const newSection = tempWrapper.firstElementChild;
+          sectionArea.appendChild(newSection);
+          if (placeholder) placeholder.style.display = 'none';
+          totalHours += 3.5;
+          updateCounters();
+          setTimeout(() => newSection.classList.add('active'), 10);
+        }
+        
+        customCursor.classList.remove('active');
+        document.body.classList.remove('is-building');
+        selectedType = null;
+        
+        setTimeout(() => {
+            customCursor.innerHTML = '';
+            customCursor.classList.remove('is-img');
+        }, 300);
+      }
+    });
+
+    function removeLastSection() {
+      const sections = Array.from(sectionArea.children).filter(el => el.classList.contains('section-image-preview'));
+      if (sections.length > 0) {
+        totalHours -= 3.5;
+        if (totalHours < 0) { totalHours = 0; }
+        updateCounters();
+        const lastSection = sections[sections.length - 1];
+        lastSection.classList.remove('active');
+        setTimeout(() => {
+          lastSection.remove();
+          if (Array.from(sectionArea.children).filter(el => el.matches('.section-image-preview')).length === 0 && placeholder) {
+            placeholder.style.display = 'block';
+          }
+        }, 400);
+      }
+    }
+
+    // === ZAKTUALIZOWANA FUNKCJA ZAPISU - TERAZ ZAWIERA LICZNIK GODZIN ===
+    function saveSectionsAsImage() {
+        const sectionsInPreview = sectionArea.querySelectorAll('.section-image-preview');
+        if (sectionsInPreview.length === 0) {
+            alert("Brak sekcji do zapisania!");
+            return;
+        }
+
+        if(placeholder) placeholder.style.display = 'none';
+
+        // Utwórz główny kontener do renderowania
+        const renderContainer = document.createElement('div');
+        renderContainer.style.position = 'absolute';
+        renderContainer.style.left = '-9999px';
+        renderContainer.style.top = '0';
+        renderContainer.style.backgroundColor = '#f0f0f0';
+        renderContainer.style.padding = '20px';
+        
+        // === ZMIANA: Klonowanie i dodawanie licznika roboczogodzin ===
+        const timeCounterElement = document.querySelector('.fixed-time-counter');
+        if (timeCounterElement) {
+            const timeCounterClone = timeCounterElement.cloneNode(true);
+            // Stylizujemy klon, aby dobrze wyglądał w statycznym obrazie
+            timeCounterClone.style.position = 'relative'; // Usuwamy pozycjonowanie fixed
+            timeCounterClone.style.bottom = 'auto';
+            timeCounterClone.style.right = 'auto';
+            timeCounterClone.style.zIndex = 'auto';
+            timeCounterClone.style.margin = '0 auto 30px auto'; // Centrowanie i margines dolny
+            timeCounterClone.style.width = 'fit-content';    // Dopasowanie szerokości do zawartości
+            timeCounterClone.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)'; // Zachowujemy cień
+            timeCounterClone.style.backdropFilter = 'none'; // Filtr nie jest potrzebny w obrazie
+            renderContainer.appendChild(timeCounterClone);
+        }
+        // ==========================================================
+
+        // Skopiuj wszystkie sekcje do nowego kontenera
+        sectionsInPreview.forEach(section => {
+            const sectionClone = section.cloneNode(true);
+            // Upewnij się, że sklonowana sekcja jest w pełni widoczna
+            sectionClone.classList.add('active'); 
+            renderContainer.appendChild(sectionClone);
+        });
+
+        document.body.appendChild(renderContainer);
+        
+        html2canvas(renderContainer, {
+            useCORS: true, 
+            scale: 2 
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = 'moj-projekt-www.png';
+            link.href = canvas.toDataURL("image/png");
+            link.click();
+        }).catch(err => {
+            console.error("Błąd podczas generowania obrazu:", err);
+            alert("Wystąpił błąd podczas zapisywania obrazu. Spróbuj uruchomić stronę przez lokalny serwer.");
+        }).finally(() => {
+            // Zawsze posprzątaj po sobie
+            document.body.removeChild(renderContainer);
+            if (sectionArea.querySelectorAll('.section-image-preview').length === 0) {
+               if (placeholder) placeholder.style.display = 'block';
+            }
+        });
+    }
+  </script>
+</body>
+</html>
