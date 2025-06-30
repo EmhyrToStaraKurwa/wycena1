@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mind Map Tool - Logic & Payment Systems</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    :root { --animation-speed: 0.5s; }
+    body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-serif; background-color: #f0f0f0; }
+    
+    .mind-map-canvas {
+        position: relative; display: flex; justify-content: center; align-items: center;
+        gap: 100px; height: calc(100vh - 100px); overflow: hidden;
+    }
+    .central-node {
+        background-color: white; color: #333; padding: 25px 40px; border-radius: 12px;
+        font-size: 1.2em; font-weight: bold; box-shadow: 0 5px 20px rgba(0,0,0,0.08); z-index: 5;
+        display: flex; flex-direction: column; align-items: center; gap: 15px; text-align: center;
+    }
+    .central-node-img { width: 40%; height: auto; }
+    
+    .mind-map-branches { display: flex; flex-direction: column; justify-content: center; gap: 60px; z-index: 5; }
+    .mind-map-sub-branches { display: flex; flex-direction: column; gap: 60px; }
+
+    .mind-map-branch { 
+        display: flex; 
+        align-items: center; 
+        gap: 80px; /* === ZMIANA: Zwiększony odstęp między rodzicem a dzieckiem === */
+        opacity: 0; 
+        transform: translateX(20px); 
+        transition: opacity var(--animation-speed) ease, transform var(--animation-speed) ease;
+    }
+    .mind-map-branch.visible { opacity: 1; transform: translateX(0); }
+    
+    .branch-image-wrapper { position: relative; }
+    .branch-image-wrapper > img { display: block; width: 150px; height: auto; border-radius: 8px; box-shadow: 0 5px 20px rgba(0,0,0,0.1); cursor: default; }
+    
+    .info-window {
+        position: absolute; bottom: 105%; left: 50%;
+        transform: translateX(-50%) scale(0.95); opacity: 0; pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease; z-index: 30;
+    }
+    .info-window img { width: 250px; border-radius: 8px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); }
+    .branch-image-wrapper:hover .info-window,
+    .mind-map-canvas.show-all-info .info-window {
+        opacity: 1; transform: translateX(-50%) scale(1);
+    }
+    
+    .mind-map-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+    .mind-map-svg line { stroke: #aaa; stroke-width: 2px; stroke-dasharray: 5, 5; opacity: 0; transition: opacity var(--animation-speed) ease; }
+    .mind-map-svg line.visible { opacity: 1; }
+    
+    .bottom-panel { position: fixed; bottom: 0; left: 0; width: 100%; height: 100px; background: #161519; padding: 0 20px; display: flex; justify-content: center; align-items: center; gap: 20px; z-index: 20; }
+    .bottom-panel-button { cursor: pointer; padding: 10px; border-radius: 8px; background-color: #292534; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+    .bottom-panel-button:hover { transform: translateY(-5px); box-shadow: 0 8px 25px rgba(0, 123, 255, 0.5); }
+    .bottom-panel-button img { display: block; height: 40px; width: auto; }
+    
+    .action-button { cursor: pointer; background: #4a4a4a; border: 1px solid #fff; color: #fff; padding: 12px 24px; border-radius: 5px; font-weight: bold; transition: background-color .2s; }
+    .action-button:hover { background: #606060; }
+    .action-button.primary { background-color: #007bff; }
+    .action-button.primary:hover { background-color: #0056b3; }
+    .action-button.info-toggle { width: 48px; height: 48px; border-radius: 50%; padding: 0; font-style: italic; font-weight: bold; font-size: 1.5em; line-height: 48px; text-align: center; background-color: #5d3eff; }
+    .action-button.info-toggle:hover { background-color: #4c2de0; }
+  </style>
+</head>
+<body>
+  <div class="mind-map-canvas" id="mindMapCanvas">
+    <svg class="mind-map-svg" id="mindMapLines"></svg>
+    <div class="central-node" id="centralNode">
+        <img src="images-blue/form.png" alt="Formularz" class="central-node-img">
+        <span>Projekt / Formularz</span>
+    </div>
+    <div class="mind-map-branches" id="mindMapBranches"></div>
+  </div>
+  
+  <div class="bottom-panel" id="bottom-panel">
+    <div class="bottom-panel-button" id="addStripeBtn" title="Dodaj połączenie Stripe"><img src="Logika i system płatności/Stripe.png" alt="Stripe Logo"></div>
+    <div class="bottom-panel-button" id="addAirtableBtn" title="Dodaj połączenie Airtable"><img src="Logika i system płatności/Airtable.png" alt="Airtable Logo"></div>
+    <div class="bottom-panel-button" id="addEmailBtn" title="Dodaj połączenie Email" style="display: none;"><img src="Logika i system płatności/email.png" alt="Email Logo"></div>
+    <div class="bottom-panel-button" id="addTelegramBtn" title="Dodaj połączenie Telegram" style="display: none;"><img src="Logika i system płatności/telegram.png" alt="Telegram Logo"></div>
+    
+    <div style="margin-left: 50px; display: flex; align-items: center; gap: 20px;">
+        <button id="saveMapBtn" class="action-button primary">Zapisz Mapę</button>
+        <button id="resetMapBtn" class="action-button">Resetuj Mapę</button>
+        <button id="toggleInfoBtn" class="action-button info-toggle" title="Pokaż/ukryj wszystkie informacje">i</button>
+    </div>
+  </div>
+  
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const centralNode = document.getElementById('centralNode');
+        const mindMapCanvas = document.getElementById('mindMapCanvas');
+        const addStripeBtn = document.getElementById('addStripeBtn');
+        const addAirtableBtn = document.getElementById('addAirtableBtn');
+        const addEmailBtn = document.getElementById('addEmailBtn');
+        const addTelegramBtn = document.getElementById('addTelegramBtn');
+        const saveMapBtn = document.getElementById('saveMapBtn');
+        const resetMapBtn = document.getElementById('resetMapBtn');
+        const toggleInfoBtn = document.getElementById('toggleInfoBtn');
+        const mindMapBranchesContainer = document.getElementById('mindMapBranches');
+        const mindMapLines = document.getElementById('mindMapLines');
+
+        addStripeBtn.addEventListener('click', () => addBranch('stripe', 'Logika i system płatności/Stripe.png'));
+        addAirtableBtn.addEventListener('click', () => addBranch('airtable', 'Logika i system płatności/Airtable.png'));
+        addEmailBtn.addEventListener('click', () => addBranch('email', 'Logika i system płatności/email.png', 'branch-stripe'));
+        addTelegramBtn.addEventListener('click', () => addBranch('telegram', 'Logika i system płatności/telegram.png', 'branch-airtable'));
+        resetMapBtn.addEventListener('click', resetMap);
+        saveMapBtn.addEventListener('click', saveMapAsImage);
+        toggleInfoBtn.addEventListener('click', () => mindMapCanvas.classList.toggle('show-all-info'));
+        window.addEventListener('resize', drawMindMapLines);
+
+        function addBranch(type, imageUrl, parentId = null) {
+          if (document.getElementById(`branch-${type}`)) return;
+          const branchElement = document.createElement('div');
+          branchElement.className = 'mind-map-branch';
+          branchElement.id = `branch-${type}`;
+          
+          let infoWindowHtml = '';
+          if (type === 'stripe') { infoWindowHtml = `<div class="info-window"><img src="Logika i system płatności/stripeinfo.png" alt="Info Stripe"></div>`; }
+          else if (type === 'airtable') { infoWindowHtml = `<div class="info-window"><img src="Logika i system płatności/airtableinfo.png" alt="Info Airtable"></div>`; }
+          else if (type === 'email') { infoWindowHtml = `<div class="info-window"><img src="Logika i system płatności/infoemail.png" alt="Info Email"></div>`; }
+          else if (type === 'telegram') { infoWindowHtml = `<div class="info-window"><img src="Logika i system płatności/infotelegram.png" alt="Info Telegram"></div>`; }
+
+          const imageWrapperHtml = `<div class="branch-image-wrapper"><img src="${imageUrl}" alt="${type} logo">${infoWindowHtml}</div>`;
+          branchElement.innerHTML = `${imageWrapperHtml}<div class="mind-map-sub-branches"></div>`;
+
+          let container = parentId ? document.getElementById(parentId)?.querySelector('.mind-map-sub-branches') : mindMapBranchesContainer;
+          if (container) {
+              container.appendChild(branchElement);
+              setTimeout(() => {
+                branchElement.classList.add('visible');
+                updateSubBranchButtons();
+                drawMindMapLines();
+              }, 10);
+          }
+        }
+
+        function updateSubBranchButtons() {
+            addEmailBtn.style.display = document.getElementById('branch-stripe') ? 'flex' : 'none';
+            addTelegramBtn.style.display = document.getElementById('branch-airtable') ? 'flex' : 'none';
+        }
+
+        function resetMap() {
+            mindMapBranchesContainer.innerHTML = ''; mindMapLines.innerHTML = '';
+            updateSubBranchButtons();
+            mindMapCanvas.classList.remove('show-all-info');
+        }
+
+        function connectElements(el1, el2, containerRect) {
+            if (!el1 || !el2) return;
+            const startRect = el1.getBoundingClientRect();
+            const endRect = el2.getBoundingClientRect();
+            const startX = startRect.right - containerRect.left;
+            const startY = startRect.top + startRect.height / 2 - containerRect.top;
+            const endX = endRect.left - containerRect.left;
+            const endY = endRect.top + endRect.height / 2 - containerRect.top;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', startX); line.setAttribute('y1', startY);
+            line.setAttribute('x2', endX); line.setAttribute('y2', endY);
+            mindMapLines.appendChild(line);
+            setTimeout(() => line.classList.add('visible'), 10);
+        }
+
+        function drawMindMapLines() {
+            mindMapLines.innerHTML = ''; 
+            const containerRect = mindMapCanvas.getBoundingClientRect();
+            document.querySelectorAll('#mindMapBranches > .mind-map-branch.visible').forEach(branch => {
+                connectElements(centralNode, branch.querySelector('.branch-image-wrapper'), containerRect);
+            });
+            document.querySelectorAll('.mind-map-sub-branches .mind-map-branch.visible').forEach(subBranch => {
+                const parentWrapper = subBranch.parentElement.closest('.mind-map-branch').querySelector('.branch-image-wrapper');
+                const subBranchWrapper = subBranch.querySelector('.branch-image-wrapper');
+                connectElements(parentWrapper, subBranchWrapper, containerRect);
+            });
+        }
+        
+        function saveMapAsImage(){
+            const wasInfoActive = mindMapCanvas.classList.contains('show-all-info');
+            if (!wasInfoActive) mindMapCanvas.classList.add('show-all-info');
+            
+            setTimeout(() => {
+                html2canvas(mindMapCanvas, { backgroundColor: '#f0f0f0', useCORS: true, scale: 2 })
+                .then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = 'logic-map.png';
+                    link.href = canvas.toDataURL("image/png");
+                    link.click();
+                }).catch(err => {
+                    console.error("Błąd podczas generowania obrazu:", err);
+                    alert("Wystąpił błąd podczas zapisywania obrazu.");
+                }).finally(() => {
+                    if (!wasInfoActive) mindMapCanvas.classList.remove('show-all-info');
+                });
+            }, 100);
+        }
+    });
+  </script>
+</body>
+</html>

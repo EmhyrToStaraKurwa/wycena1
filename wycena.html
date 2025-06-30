@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Website Builder</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    body { margin: 0; height: 100vh; overflow: hidden; font-family: Arial, sans-serif; }
+    body.is-building { cursor: none; }
+    
+    .builder-container { display: grid; grid-template-columns: 220px 1fr; height: 100%; position: relative; }
+    .panel { background: #161519; padding: 15px; overflow-y: auto; text-align: center; transition: transform 0.5s ease; z-index: 10; }
+
+    .panel h3, .time-counter, .panel ul, .panel li, .section-label, .divider, .img-button-container, .img-button, .img-button:hover, button.remove-btn, button.remove-btn:hover, .button-stack { /* styles collapsed for brevity */ }
+    .panel h3{margin:0 0 20px;color:#f0f0f0}.time-counter{color:#f0f0f0;background-color:#292534;padding:10px;border-radius:5px;margin-bottom:20px;font-size:.9em;font-weight:700}.panel ul{list-style:none;padding:0}.panel li{margin-bottom:25px}.section-label{display:block;color:#a0a0a0;font-size:.9em;margin-bottom:8px;letter-spacing:.5px}.divider{height:1px;width:100%;background-color:#a0a0a0;margin:8px 0 15px}.img-button-container{display:flex;justify-content:center;align-items:center;gap:15px}.img-button{width:100%;max-width:45px;height:auto;cursor:pointer;transition:transform .2s ease-in-out;border-radius:5px}.img-button:hover{transform:scale(1.15);box-shadow:0 0 10px rgba(149,151,255,.7)}button.remove-btn{cursor:pointer;background:#4a4a4a;border:1px solid #fff;color:#fff;width:90%;padding:8px 16px;border-radius:5px;transition:background-color .2s}button.remove-btn:hover{background:#606060}.button-stack{display:flex;flex-direction:column;align-items:center;gap:10px}
+
+    .preview { padding: 20px; overflow-y: auto; display: flex; flex-direction: column; gap: 0; background-color: #f0f0f0; }
+    .section-image-preview { opacity: 0; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease; border-radius: 8px; margin-bottom: 20px; background: transparent; padding: 0; }
+    .section-image-preview.active { opacity: 1; transform: scale(1); }
+    .section-label-preview { display: block; color: #333; text-align: center; font-size: 1.2em; font-weight: bold; margin-bottom: 15px; }
+    .divider-preview { width: 60%; height: 1px; background-color: #ccc; margin: 0 auto 20px auto; }
+    .section-image-preview img { width: 60%; height: auto; display: block; margin: 0 auto; border-radius: 8px; }
+
+    #fixed-controls { position: fixed; bottom: 20px; right: 20px; z-index: 1001; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+    .save-button, #goToLogicPageBtn { /* Wspólny styl dla przycisków w rogu */
+        background-color: #007bff; color: white; border: none; padding: 10px 20px;
+        border-radius: 5px; font-weight: bold; cursor: pointer;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2); transition: background-color 0.2s, opacity 0.5s ease;
+    }
+    .save-button:hover, #goToLogicPageBtn:hover { background-color: #0056b3; }
+    .fixed-time-counter { color: #161519; background-color: rgba(255, 255, 255, 0.8); padding: 8px 15px; border-radius: 5px; font-size: 0.9em; font-weight: bold; box-shadow: 0 2px 10px rgba(0,0,0,0.1); backdrop-filter: blur(5px); }
+    
+    #customCursor{position:fixed;pointer-events:none;opacity:0;transform:scale(0);transition:opacity .3s,transform .3s;z-index:1000;transform-origin:center} #customCursor.is-img img{max-width:100px;height:auto;opacity:.85} #customCursor.active{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  </style>
+</head>
+<body>
+  <div class="builder-container">
+    <div class="panel">
+        <h3>Sekcje</h3><div class="time-counter">Roboczogodziny: <span id="timeValue">0</span> H</div>
+        <ul>
+         <!-- Usunięto przycisk logiki z lewego panelu -->
+         <li><span class="section-label">Sekcja Nawigacji</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="profile-v1" src="images/nav pink.png"><img class="img-button" data-type="profile-v2" src="images/nav.png"></div></li>
+         <li><span class="section-label">Główna sekcja</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="main-v2" src="images/Main pink.png"><img class="img-button" data-type="main-v1" src="images/Main blue.png"></div></li>
+         <li><span class="section-label">Sekcja Fotografii</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="hero-v1" src="images/slaid foto pink.png"><img class="img-button" data-type="hero-v2" src="images/slaid foto blue.png"></div></li>
+         <li><span class="section-label">Sekcja Oferty</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="features-v1" src="images/oferta pink.png"><img class="img-button" data-type="features-v2" src="images/oferta blue.png"></div></li>
+         <li><span class="section-label">Sekcja o Firmie/Tobie</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="gallery-v1" src="images/about pink.png"><img class="img-button" data-type="gallery-v2" src="images/about blue.png"></div></li>
+         <li><span class="section-label">Sekcja Blog</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="cards-v1" src="images/blog pink.png"><img class="img-button" data-type="cards-v2" src="images/blog blue.png"></div></li>
+         <li><span class="section-label">Sekcja Opinie</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="content-v1" src="images/oceny pink.png"><img class="img-button" data-type="content-v2" src="images/oceny blue.png"></div></li>
+         <li><span class="section-label">Sekcja Formularz</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="article-v1" src="images/form pink.png"><img class="img-button" data-type="article-v2" src="images/form blue.png"></div></li>
+         <li><span class="section-label">Stopka</span><div class="divider"></div><div class="img-button-container"><img class="img-button" data-type="footer-v1" src="images/stopka pink.png"><img class="img-button" data-type="footer-v2" src="images/stopka blue.png"></div></li>
+         <li><div class="button-stack"><button onclick="removeLastSection()" class="remove-btn">Usuń ostatnią</button></div></li>
+        </ul>
+    </div>
+    
+    <div class="preview" id="sectionArea">
+        <h2>Buduj strukturę strony</h2>
+    </div>
+    
+  </div>
+  
+  <div id="customCursor"></div>
+
+  <!-- === ZMIENIONA SEKCJA KONTROLEK === -->
+  <div id="fixed-controls">
+    <button class="save-button" onclick="saveSectionsAsImage()">Zapisz sekcje</button>
+    <!-- Nowy przycisk, domyślnie ukryty -->
+    <button id="goToLogicPageBtn" style="display: none;">Logika i system płatności</button>
+    <div class="fixed-time-counter">Roboczogodziny: <span id="timeValueFixed">0</span> H</div>
+  </div>
+
+  <script>
+    const sectionArea = document.getElementById('sectionArea');
+    const placeholder = sectionArea.querySelector('h2');
+    const goToLogicPageBtn = document.getElementById('goToLogicPageBtn'); // Pobieramy nowy przycisk
+
+    // Reszta starych stałych
+    const customCursor=document.getElementById('customCursor'),timeValueSpan=document.getElementById('timeValue'),timeValueFixedSpan=document.getElementById('timeValueFixed');let totalHours=0,selectedType=null,lastX=0;
+
+    // --- LOGIKA NOWEGO PRZYCISKU ---
+    goToLogicPageBtn.addEventListener('click', () => {
+        // Przekierowanie na podstronę z mapą myśli
+        window.location.href = 'logika.html'; 
+    });
+
+    function updateLogicLinkVisibility() {
+        const formSectionExists = !!document.querySelector('.section-label-preview[data-form-section="true"]');
+        goToLogicPageBtn.style.display = formSectionExists ? 'block' : 'none';
+    }
+
+    // --- STANDARDOWA LOGIKA BUILDERA ---
+    document.addEventListener('mousemove',e=>{if(document.body.classList.contains('is-building')){const t=e.pageX;let o=0;t>lastX?o=15:t<lastX&&(o=-15),customCursor.style.transform=`translate(-50%, -50%) scale(1) rotate(${o}deg)`,customCursor.style.left=e.pageX+'px',customCursor.style.top=e.pageY+'px',lastX=t}});document.querySelectorAll('[data-type]').forEach(e=>{e.addEventListener('click',t=>{const o=t.target.closest('[data-type]');o&&(selectedType=o.getAttribute('data-type'),customCursor.innerHTML='',customCursor.appendChild(o.cloneNode(!0)),customCursor.classList.add('is-img','active'),document.body.classList.add('is-building'),lastX=t.pageX)})});function updateCounters(){timeValueSpan.textContent=totalHours,timeValueFixedSpan.textContent=totalHours}
+    sectionArea.addEventListener('click',()=>{if(selectedType){let e,t=selectedType==="article-v1"||selectedType==="article-v2"?'data-form-section="true"':'';switch(selectedType){case'profile-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Nawigacji</span><div class="divider-preview"></div><img src="images-pink/nawigacjapink.png"></div>`;break;case'main-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Główna sekcja</span><div class="divider-preview"></div><img src="images-pink/Main pink.png"></div>`;break;case'hero-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Fotografii</span><div class="divider-preview"></div><img src="images-pink/sekcja fotografii pink.png"></div>`;break;case'features-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Oferty</span><div class="divider-preview"></div><img src="images-pink/oferta pink.png"></div>`;break;case'gallery-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja o Firmie/Tobie</span><div class="divider-preview"></div><img src="images-pink/about pink.png"></div>`;break;case'cards-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Blog</span><div class="divider-preview"></div><img src="images-pink/blog pink.png"></div>`;break;case'content-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Opinie</span><div class="divider-preview"></div><img src="images-pink/sekcja opinie pink.png"></div>`;break;case'article-v1':e=`<div class="section-image-preview"><span class="section-label-preview" ${t}>Sekcja Formularz</span><div class="divider-preview"></div><img src="images-pink/form pink.png"></div>`;break;case'footer-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Stopka</span><div class="divider-preview"></div><img src="images-pink/stopka pink.png"></div>`;break;case'profile-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Nawigacji</span><div class="divider-preview"></div><img src="images-blue/nawigacja.png"></div>`;break;case'main-v1':e=`<div class="section-image-preview"><span class="section-label-preview">Główna sekcja</span><div class="divider-preview"></div><img src="images-blue/glowna-sekcja.png"></div>`;break;case'hero-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Fotografii</span><div class="divider-preview"></div><img src="images-blue/zdjecia.png"></div>`;break;case'features-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Oferty</span><div class="divider-preview"></div><img src="images-blue/oferta.png"></div>`;break;case'gallery-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja o Firmie/Tobie</span><div class="divider-preview"></div><img src="images-blue/o-mnie-o-firmie.png"></div>`;break;case'cards-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Blog</span><div class="divider-preview"></div><img src="images-blue/blog.png"></div>`;break;case'content-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Sekcja Opinie</span><div class="divider-preview"></div><img src="images-blue/opinie.png"></div>`;break;case'article-v2':e=`<div class="section-image-preview"><span class="section-label-preview" ${t}>Sekcja Formularz</span><div class="divider-preview"></div><img src="images-blue/form.png"></div>`;break;case'footer-v2':e=`<div class="section-image-preview"><span class="section-label-preview">Stopka</span><div class="divider-preview"></div><img src="images-blue/stopka.png"></div>`;break}if(e){const o=document.createElement('div');o.innerHTML=e;const n=o.firstElementChild;sectionArea.appendChild(n),placeholder&&(placeholder.style.display='none'),totalHours+=3.5,updateCounters(),updateLogicLinkVisibility(),setTimeout(()=>n.classList.add('active'),10)}customCursor.classList.remove('active'),document.body.classList.remove('is-building'),selectedType=null,setTimeout(()=>{customCursor.innerHTML='',customCursor.classList.remove('is-img')},300)}});function removeLastSection(){const e=Array.from(sectionArea.children).filter(e=>e.classList.contains("section-image-preview"));e.length>0&&(totalHours-=3.5,totalHours<0&&(totalHours=0),updateCounters(),e[e.length-1].classList.remove("active"),setTimeout(()=>{e[e.length-1].remove(),Array.from(sectionArea.children).filter(e=>e.matches(".section-image-preview")).length===0&&placeholder&&(placeholder.style.display="block"),updateLogicLinkVisibility()},500))}
+    function saveSectionsAsImage(){const e=sectionArea.querySelectorAll('.section-image-preview');if(e.length===0)return void alert("Brak sekcji do zapisania!");placeholder&&(placeholder.style.display="none");const t=document.createElement("div");t.style.position="absolute",t.style.left="-9999px",t.style.top="0",t.style.backgroundColor="#f0f0f0",t.style.padding="20px";const o=document.querySelector(".fixed-time-counter");if(o){const n=o.cloneNode(!0);n.style.position="relative",n.style.bottom="auto",n.style.right="auto",n.style.zIndex="auto",n.style.margin="0 auto 30px auto",n.style.width="fit-content",n.style.boxShadow="0 2px 10px rgba(0,0,0,0.1)",n.style.backdropFilter="none",t.appendChild(n)}e.forEach(e=>{const o=e.cloneNode(!0);o.classList.add("active"),t.appendChild(o)}),document.body.appendChild(t),html2canvas(t,{useCORS:!0,scale:2}).then(e=>{const t=document.createElement("a");t.download="moj-projekt-www.png",t.href=e.toDataURL("image/png"),t.click()}).catch(e=>{console.error("Błąd podczas generowania obrazu:",e),alert("Wystąpił błąd podczas zapisywania obrazu. Spróbuj uruchomić stronę przez lokalny serwer.")}).finally(()=>{document.body.removeChild(t),sectionArea.querySelectorAll(".section-image-preview").length===0&&placeholder&&(placeholder.style.display="block")})}
+  </script>
+</body>
+</html>
